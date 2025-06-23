@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "496161108484",
+    "project_id": "push-notification-demo-faf21",
+    "storage_bucket": "push-notification-demo-faf21.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:496161108484:android:08c4606f02ba328961bb51",
+        "android_client_info": {
+          "package_name": "com.example.pushnotificationdemo"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDfu1CSAVWBBwFnSDKonkstuoocjphrLVA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
