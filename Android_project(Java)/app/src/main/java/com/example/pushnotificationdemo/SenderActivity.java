@@ -1,6 +1,7 @@
 package com.example.pushnotificationdemo;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -11,23 +12,40 @@ import android.widget.Toast;
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.pushnotificationdemo.messagingService.FirebaseMessingServices;
+import com.example.pushnotificationdemo.sendnotification.FcmResponse;
+import com.example.pushnotificationdemo.sendnotification.FirebaseNotificationService;
+import com.example.pushnotificationdemo.sendnotification.Message;
+import com.example.pushnotificationdemo.sendnotification.MessageRequest;
+import com.example.pushnotificationdemo.sendnotification.Notification;
+import com.example.pushnotificationdemo.sendnotification.RetrofitClient;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import com.google.gson.Gson;
 
 import java.util.ArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class SenderActivity extends AppCompatActivity {
 
     EditText messageEditText;
     Button getListBtn;
     ListView userList;
-    ArrayList<String> tokenList;
-    ArrayAdapter<String> listAdapter;
-    String path = "UsersList"; // ✅ Set the path directly
 
+    ArrayList<UserInfo> userInfoList;
+    ArrayList<String> userNameList; // just for displaying names
+    ArrayAdapter<String> listAdapter;
+
+    String path = "UsersList"; // Firebase node
+    String TAG = "Fahad";
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -38,17 +56,65 @@ public class SenderActivity extends AppCompatActivity {
         getListBtn = findViewById(R.id.getListBtnId);
         userList = findViewById(R.id.userListId);
 
-        tokenList = new ArrayList<>();
-        listAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, tokenList);
+        userInfoList = new ArrayList<>();
+        userNameList = new ArrayList<>();
+
+        listAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, userNameList);
         userList.setAdapter(listAdapter);
 
-        // Optional: display FCM message if opened from notification
+        // Optional: prefill message if opened from notification
         String message = getIntent().getStringExtra("message_body");
         if (message != null) {
             messageEditText.setText(message);
         }
 
         getListBtn.setOnClickListener(v -> fetchUsersFromFirebase());
+
+        // Click listener for list items
+        userList.setOnItemClickListener((parent, view, position, id) -> {
+            UserInfo selectedUser = userInfoList.get(position);
+            String userName = selectedUser.userName;
+            String userToken = selectedUser.userToken;
+
+            sendPushNotification(userName, userToken);
+
+            // You can send the FCM message here if needed
+            // sendNotificationToUser(userToken, messageEditText.getText().toString());
+        });
+    }
+
+    private void sendPushNotification(String userName, String userToken) {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        executor.execute(() -> {
+            String token = FirebaseMessingServices.getServerKey(SenderActivity.this);
+            FirebaseNotificationService service = RetrofitClient.getInstance(token)
+                    .create(FirebaseNotificationService.class);
+            String title = "Push Notification from app";
+            String body = "Successful Push Notification ";
+            Notification notification = new Notification(title, body);
+            Message message = new Message(userToken, notification);
+            MessageRequest request = new MessageRequest(message);
+
+            service.sendNotification(request).enqueue(new Callback<FcmResponse>() {
+                @Override
+                public void onResponse(Call<FcmResponse> call, Response<FcmResponse> response) {
+                    Log.d(TAG, "onResponse: "+new Gson().toJson(response));
+                    if (response.isSuccessful()) {
+                        Toast.makeText(SenderActivity.this, "Notification has sent to User: " + userName, Toast.LENGTH_LONG).show();
+                    } else {
+                        Toast.makeText(SenderActivity.this, "Failed to Send Notification ", Toast.LENGTH_LONG).show();
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<FcmResponse> call, Throwable t) {
+                    Toast.makeText(SenderActivity.this, "Failed "+ t.getMessage(), Toast.LENGTH_LONG).show();
+                    Log.d(TAG, "onFailure: "+ "Failed" + t.getMessage());
+                }
+            });
+
+        });
+
     }
 
     private void fetchUsersFromFirebase() {
@@ -57,12 +123,14 @@ public class SenderActivity extends AppCompatActivity {
         ref.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
-                tokenList.clear();
+                userInfoList.clear();
+                userNameList.clear();
+
                 for (DataSnapshot userSnapshot : snapshot.getChildren()) {
                     UserInfo userInfo = userSnapshot.getValue(UserInfo.class);
                     if (userInfo != null) {
-                        String item = userInfo.userName + ": " + userInfo.userToken;
-                        tokenList.add(item);
+                        userInfoList.add(userInfo);
+                        userNameList.add(userInfo.userName); // show names in the ListView
                     }
                 }
                 listAdapter.notifyDataSetChanged();
