@@ -1,6 +1,5 @@
 package com.example.pushnotificationdemo;
 
-import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ArrayAdapter;
@@ -27,15 +26,13 @@ public class SenderActivity extends AppCompatActivity {
     ListView userList;
     ArrayList<String> tokenList;
     ArrayAdapter<String> listAdapter;
-    String path; // Declare here but initialize in onCreate
+    String path = "UsersList"; // ✅ Set the path directly
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_sender);
-
-        path = getIntent().getStringExtra("user"); // ✅ Move it here
 
         messageEditText = findViewById(R.id.massageId);
         getListBtn = findViewById(R.id.getListBtnId);
@@ -45,7 +42,7 @@ public class SenderActivity extends AppCompatActivity {
         listAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, tokenList);
         userList.setAdapter(listAdapter);
 
-        // Optional: show message if opened from FCM
+        // Optional: display FCM message if opened from notification
         String message = getIntent().getStringExtra("message_body");
         if (message != null) {
             messageEditText.setText(message);
@@ -55,11 +52,6 @@ public class SenderActivity extends AppCompatActivity {
     }
 
     private void fetchUsersFromFirebase() {
-        if (path == null || path.isEmpty()) {
-            Toast.makeText(this, "Invalid database path", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
         DatabaseReference ref = FirebaseDatabase.getInstance().getReference(path);
 
         ref.addListenerForSingleValueEvent(new ValueEventListener() {

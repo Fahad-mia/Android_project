@@ -1,6 +1,7 @@
 package com.example.pushnotificationdemo;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -88,6 +89,8 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(MainActivity.this, "FCM Token not generated yet. Please wait.", Toast.LENGTH_LONG).show();
                 return;
             }
+            Intent intent = new Intent(getApplicationContext(), SenderActivity.class);
+            startActivity(intent);
 
             saveToken(user, fcmToken);
         });
